@@ -21,7 +21,7 @@ function PrivateRoute({ children }) {
     useEffect(() => {
         const checkAuth = () => {
             const token = localStorage.getItem("userToken");
-            const role = localStorage.getItem("userRole");
+            const role = (localStorage.getItem("userRole") || "").toUpperCase();
             if (token && (role === "CUSTOMER" || role === "ADMIN")) {
                 setIsAuthenticated(true);
             }
@@ -52,11 +52,8 @@ function AdminRoute({ children }) {
 
     useEffect(() => {
         const token = localStorage.getItem("userToken");
-        const role = localStorage.getItem("userRole");
+        const role = (localStorage.getItem("userRole") || "").toUpperCase();
 
-        console.log("AdminRoute check - Token:", !!token, "Role:", role); // Debug log
-
-        // Check for ADMIN role (uppercase - matching backend response)
         if (token && role === "ADMIN") {
             setIsAdmin(true);
         }
@@ -82,14 +79,14 @@ function AuthRoute({ children }) {
 
     useEffect(() => {
         const token = localStorage.getItem("userToken");
-        const role = localStorage.getItem("userRole");
+        const role = (localStorage.getItem("userRole") || "").toUpperCase();
 
         if (token) {
             setShouldRedirect(true);
             if (role === "ADMIN") {
                 setRedirectPath("/admin/dashboard");
-            } else if (role === "CUSTOMER") {
-                setRedirectPath("/dashboard");
+            } else {
+                setRedirectPath("/");
             }
         }
         setIsLoading(false);

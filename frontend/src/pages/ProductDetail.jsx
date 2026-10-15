@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useEffect, useState } from "react";
+import { getDemoProducts, normalizeProductImage } from "../data/mockProducts";
 
 function ProductDetail() {
     const { id } = useParams();
@@ -8,16 +9,26 @@ function ProductDetail() {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // ✅ Fetch from /products/{id}
     useEffect(() => {
-        fetch(`http://localhost:8080/products/${id}`)
-            .then((res) => {
-                if (!res.ok) throw new Error("Product not found");
-                return res.json();
-            })
-            .then((data) => setProduct(data))
-            .catch((err) => console.error(err))
-            .finally(() => setLoading(false));
+        const loadProduct = async () => {
+            try {
+                const response = await fetch(`http://localhost:8080/products/${id}`);
+                if (!response.ok) throw new Error("Product not found");
+
+                const data = await response.json();
+                setProduct(data);
+            } catch (error) {
+                console.warn("Showing demo product because backend is unavailable.", error);
+                const demoProduct = getDemoProducts().find(
+                    (item) => String(item.productId) === String(id)
+                );
+                setProduct(demoProduct || getDemoProducts()[0]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadProduct();
     }, [id]);
 
     if (loading) {
@@ -40,11 +51,7 @@ function ProductDetail() {
             <div className="row g-4 align-items-center">
                 <div className="col-md-6 text-center">
                     <img
-                        src={
-                            product.productImage
-                                ? `data:image/jpeg;base64,${product.productImage}`
-                                : "/img/placeholder.png"
-                        }
+                        src={normalizeProductImage(product.productImage)}
                         alt={product.name}
                         className="img-fluid rounded shadow"
                         onError={(e) => (e.target.src = "/img/placeholder.png")}

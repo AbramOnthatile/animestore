@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { getDemoProducts, normalizeProductImage } from "../data/mockProducts";
 
 function Catalog() {
     const { addToCart } = useCart();
@@ -8,28 +9,30 @@ function Catalog() {
     const [category, setCategory] = useState("all");
     const [search, setSearch] = useState("");
 
-    //Fetch only available products (stock > 0)
     useEffect(() => {
-        fetch("http://localhost:8080/products/available") // CHANGED ENDPOINT
-            .then((res) => {
-                if (!res.ok) throw new Error("Failed to fetch products");
-                return res.json();
-            })
-            .then((data) => {
-                setProducts(data);
-            })
-            .catch((err) => console.error("Error fetching products:", err));
+        const loadProducts = async () => {
+            try {
+                const response = await fetch("http://localhost:8080/products/available");
+                if (!response.ok) throw new Error("Backend unavailable");
+
+                const data = await response.json();
+                setProducts(Array.isArray(data) ? data : getDemoProducts());
+            } catch (error) {
+                console.warn("Using demo catalog because backend is unavailable.", error);
+                setProducts(getDemoProducts());
+            }
+        };
+
+        loadProducts();
     }, []);
 
-    // Filter products (only available products will be shown)
     const filteredProducts = products.filter((p) => {
+        const categoryName = p.category?.categoryName || p.categoryName || "";
         const matchesCategory =
-            category === "all" ||
-            (p.category?.categoryName &&
-                p.category.categoryName.toLowerCase() === category.toLowerCase());
+            category === "all" || categoryName.toLowerCase() === category.toLowerCase();
 
         const matchesSearch =
-            search === "" || p.name.toLowerCase().includes(search.toLowerCase());
+            search === "" || (p.name || "").toLowerCase().includes(search.toLowerCase());
 
         return matchesCategory && matchesSearch;
     });
@@ -68,21 +71,17 @@ function Catalog() {
                         <div className="col-sm-6 col-md-4 col-lg-3" key={p.productId}>
                             <div className="card shadow-lg border-0 h-100 hover-shadow">
                                 <Link to={`/product/${p.productId}`}>
-                                    {p.productImage ? (
-                                        <img
-                                            src={`data:image/jpeg;base64,${p.productImage}`}
-                                            className="card-img-top"
-                                            alt={p.name}
-                                            style={{ height: "200px", objectFit: "cover" }}
-                                        />
-                                    ) : (
-                                        <img
-                                            src="/img/placeholder.png"
-                                            className="card-img-top"
-                                            alt="placeholder"
-                                            style={{ height: "200px", objectFit: "cover" }}
-                                        />
-                                    )}
+                                    <img
+                                        src={normalizeProductImage(p.productImage)}
+                                        className="card-img-top"
+                                        alt={p.name}
+                                        style={{
+                                            height: "200px",
+                                            objectFit: "cover",
+                                            filter: "saturate(1.4) contrast(1.1)",
+                                        }}
+                                        onError={(e) => (e.target.src = "/img/placeholder.png")}
+                                    />
                                 </Link>
 
                                 <div className="card-body text-center">

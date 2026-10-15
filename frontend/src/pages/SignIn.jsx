@@ -12,7 +12,7 @@ function SignIn() {
     // 🔹 Auto-redirect if already signed in
     useEffect(() => {
         const token = localStorage.getItem("userToken");
-        const role = localStorage.getItem("userRole");
+        const role = (localStorage.getItem("userRole") || "").toUpperCase();
 
         if (token && role === "ADMIN") navigate("/admin/dashboard");
         else if (token && role === "CUSTOMER") navigate("/");
@@ -33,21 +33,23 @@ function SignIn() {
             });
 
             if (response.data && response.data.token) {
+                const role = String(response.data.role || (isAdmin ? "ADMIN" : "CUSTOMER")).toUpperCase();
+
                 localStorage.setItem("userToken", response.data.token);
                 localStorage.setItem("userId", response.data.userId || response.data.id || "");
                 localStorage.setItem("userEmail", response.data.email || email);
-                localStorage.setItem("userRole", response.data.role || (isAdmin ? "ADMIN" : "CUSTOMER"));
+                localStorage.setItem("userRole", role);
 
-                if (isAdmin) {
+                if (isAdmin || role === "ADMIN") {
                     localStorage.setItem("userName", response.data.name || response.data.username || email.split("@")[0]);
                     localStorage.setItem("firstName", response.data.name || response.data.username || "Admin");
                     localStorage.setItem("lastName", "");
-                    navigate("/admin/dashboard"); // Admin goes to dashboard
+                    navigate("/admin/dashboard");
                 } else {
                     localStorage.setItem("firstName", response.data.firstName || "");
                     localStorage.setItem("lastName", response.data.lastName || "");
                     localStorage.setItem("userName", `${response.data.firstName || ""} ${response.data.lastName || ""}`.trim() || email.split("@")[0]);
-                    navigate("/"); // Customer goes to Home page
+                    navigate("/");
                 }
             } else {
                 setError("Invalid response from server. Please try again.");

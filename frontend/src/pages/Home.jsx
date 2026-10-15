@@ -1,28 +1,39 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { getDemoProducts, normalizeProductImage } from "../data/mockProducts";
 
 function Home() {
     const { addToCart } = useCart();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Fetch only available products (stock > 0) from backend
     useEffect(() => {
-        fetch("http://localhost:8080/products/available")
-            .then((res) => {
-                if (!res.ok) throw new Error("Failed to fetch products");
-                return res.json();
-            })
-            .then((data) => {
-                // Take only first 12 available products
-                setProducts(data.slice(0, 12));
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error("Error fetching products:", err);
-                setLoading(false);
-            });
+        let isMounted = true;
+
+        const loadProducts = async () => {
+            try {
+                const response = await fetch("http://localhost:8080/products/available");
+                if (!response.ok) throw new Error("Backend unavailable");
+
+                const data = await response.json();
+                if (isMounted) {
+                    setProducts(Array.isArray(data) ? data.slice(0, 12) : getDemoProducts().slice(0, 12));
+                }
+            } catch (error) {
+                console.warn("Using demo products because backend is unavailable.", error);
+                if (isMounted) {
+                    setProducts(getDemoProducts().slice(0, 8));
+                }
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        loadProducts();
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     return (
@@ -152,16 +163,13 @@ function Home() {
                                     <div className="card shadow-lg border-0 h-100 hover-shadow">
                                         <Link to={`/product/${p.productId}`}>
                                             <img
-                                                src={
-                                                    p.productImage
-                                                        ? `data:image/jpeg;base64,${p.productImage}`
-                                                        : "/img/placeholder.png"
-                                                }
+                                                src={normalizeProductImage(p.productImage)}
                                                 alt={p.name}
                                                 className="card-img-top"
                                                 style={{
-                                                    height: "250px",   // uniform image height
-                                                    objectFit: "cover", // keeps images same size
+                                                    height: "250px",
+                                                    objectFit: "cover",
+                                                    filter: "saturate(1.35) contrast(1.08)",
                                                 }}
                                                 onError={(e) => (e.target.src = "/img/placeholder.png")}
                                             />
